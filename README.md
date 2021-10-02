@@ -9,10 +9,13 @@
 5. You should see a console message "Example app listening on port 8000!" when the application server has started.
 6. From the root of the local git project, cd to the `/client` directory. Open a new terminal window for the client application, in this directory. Run `yarn install`, and then `yarn start`.
 7. You should see a console message that the client application is available at http://localhost:3000, when the client application server has started.
+8. The "admin" app is available at localhost:3000/admin.  This app displays a list of connected vehicles and their status properties.
+9. The "vehicle" app is available at localhost:3000/vehicle.  This app displays the vehicle status properties.
+
 
 
 
 
 # GitHub
 
-PAT: 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
+PAT: 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
