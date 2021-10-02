@@ -41,7 +41,7 @@ wsServer.on('connection', socket => {
 // the same ws upgrade process described here:
 // https://www.npmjs.com/package/ws#multiple-servers-sharing-a-single-https-server
 const server = app.listen(port, () => {
-    console.log(`Example app listening on port ${port}!`);
+    console.log(`Rivian server app listening on port ${port}!`);
   });
 server.on('upgrade', (request, socket, head) => {
   wsServer.handleUpgrade(request, socket, head, socket => {
