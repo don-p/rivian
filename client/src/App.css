@@ -1,0 +1,63 @@
+.App {
+  text-align: center;
+  min-height: 100vh;
+  background-color: #282c34;
+}
+
+.App-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: rgb(233, 233, 233);
+}
+
+.App-table-container {
+  margin-top: 24px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+.App-table {
+  justify-content: center;
+  border-spacing: 0px !important;
+}
+.App-table thead th {
+  border-left: 0px;
+  border-left: 0px;
+  border-bottom: rgb(212, 212, 212) 1px solid;
+  padding: 6px;
+}
+
+.App-table tbody td {
+  border-left: 0px;
+  border-left: 0px;
+  padding: 6px;
+}
+
+.App-table-heading {
+  margin: 12px;
+}
+
+.App-table-text {
+  text-align: center;
+  font-size: 1rem;
+  color: rgb(233, 233, 233);
+}
+
+.App-link {
+  color: #61dafb;
+}

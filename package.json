@@ -1,0 +1,16 @@
+{
+  "name": "rivian",
+  "version": "1.0.0",
+  "description": "Connected car app.",
+  "main": "index.js",
+  "scripts": {
+    "test": "\"echo \\\"Error: no test specified\\\" && exit 1\"",
+    "start": "node src/server.js"
+  },
+  "author": "Don Peterkofsky",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "ws": "^8.2.2"
+  }
+}
