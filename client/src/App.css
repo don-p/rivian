@@ -30,6 +30,12 @@
   justify-content: center;
 }
 
+.App-carstatus {
+  background-color: #393e49;
+  border-radius: 5%;
+  margin: 12px;
+  padding: 12Px;
+}
 
 .App-table {
   justify-content: center;

@@ -33,10 +33,10 @@ export const CarApp = () => {
     let vehicle = vehicleState;
 
     // Connect to the remote websocket server.
-    const ws = new WebSocket('ws://localhost:8000');
+    const ws = new WebSocket(`ws://localhost:8000?clientId=${vin}`);
     setWs(ws);
     // On successful WS connection, send a message with the initial vehicle state.
-    ws.addEventListener('open', function open() {
+    ws.addEventListener('open', () => {
       console.log('socket opened');
       // Set VIN value on vehicle state.
       vehicle = {...vehicleState, vin}
@@ -50,20 +50,24 @@ export const CarApp = () => {
     });
     
     // Listen for server messages.
-    ws.addEventListener('message', function incoming(message) {
+    ws.addEventListener('message', (message) => {
       const messageData = JSON.parse(message.data);
       switch(messageData.type) {
         // Pace car status changed on this vehicle.
         case 'paceCarStatus':
-          const isPaceCar = messageData.isPaceCar ?? false;
-          setVehicleState({...vehicle, isPaceCar});
-          console.log("Vehicle paceCar status updated:", isPaceCar);
+          if(messageData.vin === vehicle.vin) {
+            const isPaceCar = messageData.isPaceCar ?? false;
+            setVehicleState({...vehicle, isPaceCar});
+            console.log("Vehicle paceCar status updated:", isPaceCar);  
+          }
           break;
         // Honk the horn on this vehicle.
         case 'horn':
-          horn();
+          if(messageData.vin === vehicle.vin) {
+            horn();
+            console.log("my horn was honked.");
+          }
           break;
-
       }
       console.log('received: %s', messageData);
     });
@@ -91,29 +95,31 @@ export const CarApp = () => {
           Vehicle app running | ID {vehicleState.vin}
           {vehicleState.isPaceCar ? (<span style={{fontWeight: "bold"}}> (Pace car)</span>) : null}
         </div>
-        <div style={{ marginTop: "24px"}}>Current vehicle status:</div>
-        <div>
-          <table className="App-table App-table-text">
-          <tbody>
-            <tr>
-              <td className="App-cartable-label">Drive Status:</td>
-              <td className="App-cartable-text">{vehicleState.driveStatus}</td>
-            </tr>
-            <tr>
-              <td  className="App-cartable-label">Speed:</td>
-              <td className="App-cartable-text">{vehicleState.speed}</td>
-            </tr>
-            <tr>
-              <td  className="App-cartable-label">Headlights:</td>
-              <td className="App-cartable-text">{vehicleState.headlightStatus}</td>
-            </tr>
-            <tr>
-              <td  className="App-cartable-label">Locks:</td>
-              <td className="App-cartable-text">{vehicleState.lockStatus}</td>
-            </tr>
-        </tbody>
-        </table>
-</div>
+        <div className="App-carstatus">
+        <div style={{ marginBottom: "24px"}}>Current vehicle status:</div>
+          <div>
+            <table className="App-table App-table-text">
+              <tbody>
+                <tr>
+                  <td className="App-cartable-label">Drive Status:</td>
+                  <td className="App-cartable-text">{vehicleState.driveStatus}</td>
+                </tr>
+                <tr>
+                  <td  className="App-cartable-label">Speed:</td>
+                  <td className="App-cartable-text">{vehicleState.speed}</td>
+                </tr>
+                <tr>
+                  <td  className="App-cartable-label">Headlights:</td>
+                  <td className="App-cartable-text">{vehicleState.headlightStatus}</td>
+                </tr>
+                <tr>
+                  <td  className="App-cartable-label">Locks:</td>
+                  <td className="App-cartable-text">{vehicleState.lockStatus}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </header>
       <button onClick={() => horn()}>Enable control</button>
     </div>

@@ -1,19 +1,18 @@
-const express = require('express');
 const ws = require('ws');
-
-const app = express();
 const port = 8000;
+
+const ADMIN_ID = 'ADMIN';
 
 /**
  * WebSocket server.
  */
 
-// Set up a headless websocket server.
-// Server logs any events that are received.
-const wsServer = new ws.Server({ noServer: true });
+// Set up a websocket server.
+// Logs any events that are received.
+const wsServer = new ws.WebSocketServer({ port: port });
 
 // Server-scoped Map objects.
-// This project uses an in-memory map to store the vehicle data.
+// This project uses in-memory map objects to store the vehicle data.
 const vehicleDB = {};
 // Map of socket instances to vehicles.
 const clients = {};
@@ -21,7 +20,13 @@ const clients = {};
 // Message queue (in-memory)
 const messageQueue = [];
 
-wsServer.on('connection', socket => {
+wsServer.on('connection', (socket, request) => {
+  console.log(`Websocket app listening on port ${port}!`);
+
+  const params = new URLSearchParams(request.url.substr(2));
+  const clientId = params.get('clientId');
+  // Save the clientId in the socket object as an id reference.
+  socket.client = clientId;
 
   // Once connected, set up Websocket message handler.
   socket.on('message', message => 
@@ -33,20 +38,27 @@ wsServer.on('connection', socket => {
       switch(messageData.type) {
         // Initial connection message, with initial vehicle state.
         case 'connect':
-          const vehicle = messageData.vehicleState;
-          const VIN = vehicle.vin;
-          // Associate socket instance with vehicle.
-          clients[VIN] = socket;
-          // Associate the vehicle with the socket instance via a client id.
-          socket.client = VIN;
-          // Add the vehicle to the collection.
-          vehicleDB[VIN] = vehicle;
-          // If this is first connected vehicle, set is as "pace car".
-          if (Object.keys(vehicleDB).length === 1) {
-            vehicle.isPaceCar = true;
-            paceCarUpdate(VIN);
-          }
-          console.log("Vehicle connected with VIN:", VIN, vehicle);
+          if(!messageData.isAdmin) {
+            const vehicle = messageData.vehicleState;
+            const VIN = vehicle.vin;
+            console.log("Socket connected", VIN);
+            // Add the vehicle to the collection.
+            vehicleDB[VIN] = vehicle;
+            // If this is first connected vehicle, set is as "pace car".
+            if (Object.keys(vehicleDB).length === 1) {
+              vehicle.isPaceCar = true;
+              paceCarUpdate(VIN);
+            }
+            console.log("Vehicle connected with VIN:", VIN, vehicle);
+          } 
+
+          // Send updates to admin app when new vhicle connects.
+          broadcast(wsServer, {type: 'carStatus', vehicles: vehicleDB});
+          break;
+        case 'horn':
+          const clientId = messageData.vin;
+          console.log("Horn for vehicle", clientId);
+          broadcast(wsServer, {type: 'horn', vin: clientId});
           break;
         case 'message':
           console.log("Message:", JSON.stringify(messageData));
@@ -54,25 +66,25 @@ wsServer.on('connection', socket => {
         default:
           console.log("unsupported message type", messageData);
       }
-
-      console.log("Vehicles:", JSON.stringify(vehicleDB));
     });
 
   socket.on('close', (code) => {
-    const vin = socket.client;
-    const disconnectedVehicle = vehicleDB[vin];
-    const isPaceCar = disconnectedVehicle.isPaceCar;
+    const clientId = socket.client;
+    if(clientId !== ADMIN_ID) {
+      const disconnectedVehicle = vehicleDB[clientId];
+      const isPaceCar = disconnectedVehicle.isPaceCar;
 
-    // Remove the disconnected vehicle from the conected vehicles collections.
-    delete vehicleDB[vin];
-    delete clients[vin];
-    console.log("Vehicle disconnected with VIN:", socket.client, disconnectedVehicle);
+      // Remove the disconnected vehicle from the conected vehicles collections.
+      // delete vehicleDB[vin];
+      // delete clients[vin];
+      console.log("Vehicle disconnected with VIN:", socket.client, disconnectedVehicle);
 
-    // If disconnected vehicle was "pace car", and there are more cars connected,
-    // select a new one from the connected vehicles collection.
-    if (isPaceCar && Object.keys(vehicleDB).length > 0) {
-      const newPaceCarVin = Object.keys(vehicleDB)[0];
-      paceCarUpdate(newPaceCarVin);
+      // If disconnected vehicle was "pace car", and there are more cars connected,
+      // select a new one from the connected vehicles collection.
+      if (isPaceCar && Object.keys(vehicleDB).length > 0) {
+        const newPaceCarVin = Object.keys(vehicleDB)[0];
+        paceCarUpdate(newPaceCarVin);
+      }
     }
   });
 });
@@ -80,6 +92,14 @@ wsServer.on('connection', socket => {
 /**
  * WebSocket message functions.
  */
+// Broadcast message to all clients.
+function broadcast(wsServer, message) {
+  wsServer.clients.forEach((client) => {
+    if (client.readyState === client.OPEN) {
+      sendBuffered(client, message);
+    }
+  });
+}
 
 // Update the selected vehicle to be the "pace car".
 function paceCarUpdate(newPaceCarVin) {
@@ -88,7 +108,7 @@ function paceCarUpdate(newPaceCarVin) {
   console.log("New pace car selected with VIN", newPaceCarVin);
   // Send message to new vehicle notifying of pace car status change.
   const paceCarSocket = clients[newPaceCarVin];
-  sendBuffered(paceCarSocket, JSON.stringify({type: 'paceCarStatus', isPaceCar: true}));
+  broadcast(wsServer, {type: 'paceCarStatus', vin: newPaceCarVin, isPaceCar: true});
 }
 
 // Send an optionally-buffered message to the specified socket connection.
@@ -100,6 +120,7 @@ function sendBuffered(socket, message) {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(message));
   } else {
+    console.log("Buffering message for socket:", socket.client, message);
     messageQueue.push({client: socket.client, message});
   }
   
@@ -125,36 +146,4 @@ function getBuffered(client) {
     });
   }
 }
-
-/**
- * WebSocket server.
- */
-// `server` is a vanilla Node.js HTTP server, so use
-// the same ws upgrade process described here:
-// https://www.npmjs.com/package/ws#multiple-servers-sharing-a-single-https-server
-const server = app.listen(port, () => {
-    console.log(`Rivian server app listening on port ${port}!`);
-  });
-
-server.on('upgrade', (request, socket, head) => {
-  wsServer.handleUpgrade(request, socket, head, socket => {
-    wsServer.emit('connection', socket, request);
-    console.log(`Websocket app listening on port ${port}!`)
-  });
-});
-
-// API server routes
-
-// Returns the tracked connected vehicles collection.
-app.get('/api/vehicles', (req, res) => {
-    res.send({vehicleData: vehicleDB});
-  });
-  
-// Honks the horn on specified vehicle.
-app.get('/api/horn/:vin', (req, res) => {
-  const client = req.params.vin;
-  console.log("Horn for vehicle", client);
-  const socket = clients[client];
-  socket.send(JSON.stringify({type: 'horn'}));
-});
 
