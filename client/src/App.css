@@ -58,6 +58,15 @@
   color: rgb(233, 233, 233);
 }
 
+.App-cartable-label {
+  text-align: right;
+  font-weight: bold;
+}
+
+.App-cartable-text {
+  text-align: left;
+}
+
 .App-link {
   color: #61dafb;
 }

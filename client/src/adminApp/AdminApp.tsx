@@ -9,7 +9,7 @@ export const AdminApp = () => {
 
   useEffect(() => {
     // Get connected vehicles from server on page load.
-    const vehiclesPromise = fetch('http://localhost:3000/api', {method: 'GET'});
+    const vehiclesPromise = fetch('http://localhost:3000/api/vehicles', {method: 'GET'});
     vehiclesPromise.then((response) => {
       response.json().then((vehicles) => {
         // Set the collection of vehicleData into the state value.
@@ -19,6 +19,15 @@ export const AdminApp = () => {
       console.log("Problem retrieving vehicle data:", error);
     })
   }, []);
+
+  const horn = (vin: number) => {
+    // Honk the horn for the specified vehicle.
+    const hornPromise = fetch(`http://localhost:3000/api/horn/${vin}`, {method: 'GET'});
+    hornPromise.catch((error) => {
+      console.log("Problem locating vehicle:", error);
+    })
+    
+  }
 
   return (
     <div>
@@ -35,18 +44,21 @@ export const AdminApp = () => {
             <th>Speed</th>
             <th>Headlights</th>
             <th>Locks</th>
+            <th>Pace car?</th>
+            <th> </th>
           </tr>
           </thead>
           <tbody>
         {
-          Object.keys(vehicles).map((vin: string) => {
-            const vehicle: VehicleState = vehicles[vin];
-            return (<tr key={vin}>
-              <td style={{fontWeight: "bold"}}>{vin}</td>
+          Object.values(vehicles).map((vehicle: VehicleState) => {
+            return (<tr key={vehicle.vin}>
+              <td style={{fontWeight: "bold"}}>{vehicle.vin}</td>
               <td>{vehicle.driveStatus}</td>
               <td>{vehicle.speed}</td>
               <td>{vehicle.headlightStatus}</td>
               <td>{vehicle.lockStatus}</td>
+              <td>{vehicle.isPaceCar.toString()}</td>
+              <td><button onClick={() => horn(vehicle.vin)}>Horn</button></td>
             </tr>);
           })
         }
