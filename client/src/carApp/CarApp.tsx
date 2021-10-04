@@ -73,21 +73,35 @@ export const CarApp = () => {
 
   // Make the WebSocket connection.
   const makeConnection = useCallback((vehicle: VehicleState, vin: number) => {
+      // Set VIN value on vehicle state.
+      let vehicleStatus = {...vehicle, vin};
+
     // Connect to the remote websocket server.
     const ws = new WebSocket(`ws://localhost:8000?clientId=${vin}`);
     setWs(ws);
     // On successful WS connection, send a message with the initial vehicle state.
     ws.addEventListener('open', () => {
       console.log('socket opened');
-      // Set VIN value on vehicle state.
-      vehicle = {...vehicleState, vin}
-      setVehicleState(vehicle);
+      setVehicleState(vehicleStatus);
       // Notify server of vehicle connection status.
       ws.send(JSON.stringify({
         type: 'connect', 
-        vehicleState: vehicle,
+        vehicleState: vehicleStatus,
       }));
       console.log('initial vehicle status sent');
+      // After connection is open, set up status update interval.
+      const timeoutId = setInterval(() => {
+        const speed = getSpeed();
+        const location = getLocation();
+        vehicleStatus = { ...vehicleStatus, speed, location, driveStatus: 'DRIVE' as const, vin};
+        setVehicleState(vehicleStatus);
+        // Notify server of vehicle status.
+        ws.send(JSON.stringify({
+          type: 'statusUpdate', 
+          vehicleState: vehicleStatus,
+        }));
+
+      }, 5000);
     });
     
     // Listen for server messages.
@@ -96,15 +110,16 @@ export const CarApp = () => {
       switch(messageData.type) {
         // Pace car status changed on this vehicle.
         case 'paceCarStatus':
-          if(messageData.vin === vehicle.vin) {
+          if(messageData.vin === vehicleStatus.vin) {
             const isPaceCar = messageData.isPaceCar ?? false;
-            setVehicleState({...vehicle, isPaceCar});
+            vehicleStatus = {...vehicleStatus, isPaceCar};
+            setVehicleState(vehicleStatus);
             console.log("Vehicle paceCar status updated:", isPaceCar);  
           }
           break;
         // Honk the horn on this vehicle.
         case 'horn':
-          if(messageData.vin === vehicle.vin) {
+          if(messageData.vin === vehicleStatus.vin) {
             horn();
             console.log("my horn was honked.");
           }
@@ -112,21 +127,7 @@ export const CarApp = () => {
       }
       console.log('received: %s', messageData);
     });
-
-    // Set up status update interval.
-    const timeoutId = setInterval(() => {
-      const speed = getSpeed();
-      const location = getLocation();
-      const vehicleUpdate = { ...vehicleState, speed, location, driveStatus: 'DRIVE' as const};
-      setVehicleState(vehicleUpdate);
-      // Notify server of vehicle status.
-      ws.send(JSON.stringify({
-        type: 'statusUpdate', 
-        vehicleState: vehicleUpdate,
-      }));
-
-    }, 5000);
-  }, [getLocation, getSpeed, horn, vehicleState]);
+  }, [getLocation, getSpeed, horn]);
 
   // Disconnect the vehicle from the server.  (For testing.)
   const disconnect = useCallback(() => {

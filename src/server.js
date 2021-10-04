@@ -44,8 +44,11 @@ wsServer.on('connection', (socket, request) => {
             console.log("Socket connected", VIN);
             // Add the vehicle to the collection.
             vehicleDB[VIN] = vehicle;
-            // If this is first connected vehicle, set is as "pace car".
-            if (Object.keys(vehicleDB).length === 1) {
+            // If no other "pace car" vehicle, set this vehicle as "pace car".
+            const paceCars = Object.values(vehicleDB).filter((item) => {
+              return item.isPaceCar;
+            })
+            if (paceCars.length < 1) {
               vehicle.isPaceCar = true;
               paceCarUpdate(VIN);
             }
