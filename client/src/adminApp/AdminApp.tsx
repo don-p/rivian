@@ -67,8 +67,9 @@ export const AdminApp = () => {
             <th>VIN</th>
             <th>Drive Status</th>
             <th>Speed</th>
-            <th>Headlights</th>
+            <th>Lights</th>
             <th>Locks</th>
+            <th>Loc</th>
             <th>Pace car?</th>
             <th> </th>
           </tr>
@@ -82,6 +83,7 @@ export const AdminApp = () => {
               <td>{vehicle.speed}</td>
               <td>{vehicle.headlightStatus}</td>
               <td>{vehicle.lockStatus}</td>
+              <td>{`${vehicle.location.x}, ${vehicle.location.y}`}</td>
               <td>{vehicle.isPaceCar.toString()}</td>
               <td><button onClick={() => horn(vehicle.vin)}>Horn</button></td>
             </tr>);

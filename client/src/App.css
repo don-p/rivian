@@ -32,9 +32,27 @@
 
 .App-carstatus {
   background-color: #393e49;
-  border-radius: 5%;
+  border-radius: 5px;
   margin: 12px;
-  padding: 12Px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.App-carstatus-header {
+  color: rgb(233, 233, 233);
+  background-color: #697183;
+  border-bottom: #454b58;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+}
+
+.App-carcontrol {
+  padding: 6px;
 }
 
 .App-table {

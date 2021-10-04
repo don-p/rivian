@@ -51,8 +51,16 @@ wsServer.on('connection', (socket, request) => {
             }
             console.log("Vehicle connected with VIN:", VIN, vehicle);
           } 
-
-          // Send updates to admin app when new vhicle connects.
+          // Send updates to admin app when new vehicle connects.
+          broadcast(wsServer, {type: 'carStatus', vehicles: vehicleDB});
+          break;
+        case 'statusUpdate':
+          const vehicle = messageData.vehicleState;
+          const VIN = messageData.vehicleState.vin;
+          // Update the vehicle in the collection.
+          vehicleDB[VIN] = vehicle;
+          console.log("Vehicle updated with VIN:", VIN, vehicle);
+          // Send updates to admin app when vehicle updates.
           broadcast(wsServer, {type: 'carStatus', vehicles: vehicleDB});
           break;
         case 'horn':

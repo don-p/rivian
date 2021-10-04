@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { CarStatus } from './CarStatus';
+import { CarControls } from './CarControls';
 import '../App.css';
 
 // The type representing the set of vehicle status properties.
@@ -8,6 +10,7 @@ export type VehicleState = {
   driveStatus: 'PARKED' | 'DRIVE' | 'REVERSE';
   lockStatus: 'LOCKED' | 'UNLOCKED';
   speed: number;
+  location: { x: string; y: string };
   isPaceCar: boolean;
 };
 
@@ -22,16 +25,54 @@ export const CarApp = () => {
     driveStatus: 'PARKED', 
     lockStatus: 'UNLOCKED',
     speed: 0,
+    location: { x: '', y: '' },
     isPaceCar: false
   });
 
   // Page load initialization effect.
   useEffect(() => {
-    // Use random integer for car VIN.
-    const vin = Math.ceil(Math.random() * 1000);
+    // Assign a VIN to the vehicle.
+    const vin = getVin();
     // Maintain vehicle state in closure for async message receiving.
     let vehicle = vehicleState;
+    // Connect the vehicle to the server.
+    makeConnection(vehicle, vin);
 
+    // This effect hook should run only once on page load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  // Helper functions
+
+  // Get a random VIN number.
+  const getVin = useCallback((): number => {
+    // Use random integer for car VIN.
+    const vin = Math.ceil(Math.random() * 1000);
+    return vin;
+  }, []);
+
+  // Get a random speed number between 0-60.
+  const getSpeed = useCallback((): number => {
+    const speed = Math.floor(Math.random() * 60);
+    return speed;
+  }, []);
+
+  // Get a random location tuple.
+  const getLocation = useCallback((): {x: string, y: string} => {
+    const x = (Math.random() * 100).toFixed(4);
+    const y = (Math.random() * 100).toFixed(4);
+    return { x, y };
+  }, []);
+
+  // Honk the horn.
+  const horn = useCallback(() => {
+    var snd = new Audio("horn.mp3"); // buffers automatically when created
+    snd.play();
+  }, []);
+
+  // Make the WebSocket connection.
+  const makeConnection = useCallback((vehicle: VehicleState, vin: number) => {
     // Connect to the remote websocket server.
     const ws = new WebSocket(`ws://localhost:8000?clientId=${vin}`);
     setWs(ws);
@@ -71,22 +112,37 @@ export const CarApp = () => {
       }
       console.log('received: %s', messageData);
     });
-    // This effect hook should run only once on page load.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // Send a message to the websocket server.
-  const sendMessage = (message: any) => {
-    if (!!ws && ws.readyState === ws.OPEN) {
-      ws.send(JSON.stringify({type: 'message', message: message}));
+    // Set up status update interval.
+    const timeoutId = setInterval(() => {
+      const speed = getSpeed();
+      const location = getLocation();
+      const vehicleUpdate = { ...vehicleState, speed, location, driveStatus: 'DRIVE' as const};
+      setVehicleState(vehicleUpdate);
+      // Notify server of vehicle status.
+      ws.send(JSON.stringify({
+        type: 'statusUpdate', 
+        vehicleState: vehicleUpdate,
+      }));
+
+    }, 5000);
+  }, [getLocation, getSpeed, horn, vehicleState]);
+
+  // Disconnect the vehicle from the server.  (For testing.)
+  const disconnect = useCallback(() => {
+    if(!!ws && ws.readyState === ws.OPEN) {
+      ws.close();
     }
-  };
+  }, [ws]);
+  
+  // Reconnect the vehicle to the server.
+  const reconnect = useCallback(() => {
+    if(!!ws && ws.readyState !== ws.OPEN) {
+      makeConnection(vehicleState, vehicleState.vin);
+    }
+  }, [makeConnection, vehicleState, ws]);
 
-  // Honk the horn.
-  const horn = () => {
-    var snd = new Audio("horn.mp3"); // buffers automatically when created
-    snd.play();
-  }
+
 
   return (
     <div style={{ marginTop: "24px"}}>
@@ -95,33 +151,10 @@ export const CarApp = () => {
           Vehicle app running | ID {vehicleState.vin}
           {vehicleState.isPaceCar ? (<span style={{fontWeight: "bold"}}> (Pace car)</span>) : null}
         </div>
-        <div className="App-carstatus">
-        <div style={{ marginBottom: "24px"}}>Current vehicle status:</div>
-          <div>
-            <table className="App-table App-table-text">
-              <tbody>
-                <tr>
-                  <td className="App-cartable-label">Drive Status:</td>
-                  <td className="App-cartable-text">{vehicleState.driveStatus}</td>
-                </tr>
-                <tr>
-                  <td  className="App-cartable-label">Speed:</td>
-                  <td className="App-cartable-text">{vehicleState.speed}</td>
-                </tr>
-                <tr>
-                  <td  className="App-cartable-label">Headlights:</td>
-                  <td className="App-cartable-text">{vehicleState.headlightStatus}</td>
-                </tr>
-                <tr>
-                  <td  className="App-cartable-label">Locks:</td>
-                  <td className="App-cartable-text">{vehicleState.lockStatus}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </header>
-      <button onClick={() => horn()}>Enable control</button>
+      <CarStatus vehicleState={vehicleState}/>
+      <CarControls horn={horn} disconnect={disconnect} reconnect={reconnect} connection={ws}/>
     </div>
   );
+
 }
