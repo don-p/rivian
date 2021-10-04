@@ -10,12 +10,7 @@
 6. From the root of the local git project, cd to the `/client` directory. Open a new terminal window for the client application, in this directory. Run `yarn install`, and then `yarn start`.
 7. You should see a console message that the client application is available at http://localhost:3000, when the client application server has started.
 8. The "admin" app is available at localhost:3000/admin.  This app displays a list of connected vehicles and their status properties.
-9. The "vehicle" app is available at localhost:3000/vehicle.  This app displays the vehicle status properties.
+9. The "car" app is available at localhost:3000/vehicle.  This app displays the vehicle status properties.
+10. Open one browser window with the "admin" app at localhost:3000/admin, and two browser windows with the "car" app at localhost:3000/vehicle.
+11. The "admin" app should display a list of two cars; each car app should display its current status.  Both apps should display one car as the "pace car", and should update the car speed and location every 5 seconds.  If a car is disconnected (using the "Disconnect" button in the car app), a new pace car should be selected, as seen on both the admin and car apps.  Reconnecting the disconnected car should show that it is no longer the "pace car" and should re-start the car with its current status (which has been updating locally while disconnected).
 
-
-
-
-
-# GitHub
-
-PAT: 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
