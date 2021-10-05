@@ -127,6 +127,12 @@ export const CarApp = () => {
       }
       console.log('received: %s', messageData);
     });
+
+    ws.addEventListener('close', () => {
+      // When car is disconnected, "pace car" status is transferred to another car.
+      vehicleStatus = {...vehicleStatus, isPaceCar: false};
+      setVehicleState(vehicleStatus);
+    });
   }, [getLocation, getSpeed, horn]);
 
   // Disconnect the vehicle from the server.  (For testing.)

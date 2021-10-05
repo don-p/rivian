@@ -49,8 +49,8 @@ wsServer.on('connection', (socket, request) => {
               return item.isPaceCar;
             })
             if (paceCars.length < 1) {
-              vehicle.isPaceCar = true;
-              paceCarUpdate(VIN);
+              // vehicle.isPaceCar = true;
+              paceCarUpdate(vehicle);
             }
             console.log("Vehicle connected with VIN:", VIN, vehicle);
           } 
@@ -93,8 +93,12 @@ wsServer.on('connection', (socket, request) => {
       // If disconnected vehicle was "pace car", and there are more cars connected,
       // select a new one from the connected vehicles collection.
       if (isPaceCar && Object.keys(vehicleDB).length > 0) {
-        const newPaceCarVin = Object.keys(vehicleDB)[0];
-        paceCarUpdate(newPaceCarVin);
+        const availableVehicles = Object.values(vehicleDB).filter((item) => {
+          return !item.isAdmin && !item.isPaceCar;
+        })
+        const newPaceCar = availableVehicles[0];
+        paceCarUpdate(newPaceCar);
+        disconnectedVehicle.isPaceCar = false;
       }
     }
   });
@@ -113,13 +117,11 @@ function broadcast(wsServer, message) {
 }
 
 // Update the selected vehicle to be the "pace car".
-function paceCarUpdate(newPaceCarVin) {
-  const newPaceCar = vehicleDB[newPaceCarVin];
+function paceCarUpdate(newPaceCar) {
   newPaceCar.isPaceCar = true;
-  console.log("New pace car selected with VIN", newPaceCarVin);
+  console.log("New pace car selected with VIN", newPaceCar.vin);
   // Send message to new vehicle notifying of pace car status change.
-  const paceCarSocket = clients[newPaceCarVin];
-  broadcast(wsServer, {type: 'paceCarStatus', vin: newPaceCarVin, isPaceCar: true});
+  broadcast(wsServer, {type: 'paceCarStatus', vin: newPaceCar.vin, isPaceCar: true});
 }
 
 // Send an optionally-buffered message to the specified socket connection.
