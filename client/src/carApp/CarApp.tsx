@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CarStatus } from './CarStatus';
 import { CarControls } from './CarControls';
+import { WSQueue } from '../WSQueue/WSQueue';
 import '../App.css';
 
 // The type representing the set of vehicle status properties.
@@ -17,6 +18,8 @@ export type VehicleState = {
 export const CarApp = () => {
   // Reference to the WebSocket connection.
   const [ws, setWs] = useState<WebSocket>();
+  // Reference to the WebSocket message queue.
+  const [messageQueue] = useState<WSQueue>(new WSQueue());
   // The connected vehicle's initial state, with uninitialized
   // VIN value (generated below on page load).
   const [vehicleState, setVehicleState] = useState<VehicleState>({
@@ -73,21 +76,23 @@ export const CarApp = () => {
 
   // Make the WebSocket connection.
   const makeConnection = useCallback((vehicle: VehicleState, vin: number) => {
-      // Set VIN value on vehicle state.
-      let vehicleStatus = {...vehicle, vin};
+    // Set VIN value on vehicle state.
+    let vehicleStatus = {...vehicle, vin};
 
     // Connect to the remote websocket server.
     const ws = new WebSocket(`ws://localhost:8000?clientId=${vin}`);
     setWs(ws);
+    messageQueue.setWs(ws);
     // On successful WS connection, send a message with the initial vehicle state.
     ws.addEventListener('open', () => {
       console.log('socket opened');
+      (ws as any).client = vin;
       setVehicleState(vehicleStatus);
       // Notify server of vehicle connection status.
-      ws.send(JSON.stringify({
+      messageQueue.send({
         type: 'connect', 
         vehicleState: vehicleStatus,
-      }));
+      });
       console.log('initial vehicle status sent');
       // After connection is open, set up status update interval.
       const timeoutId = setInterval(() => {
@@ -96,10 +101,10 @@ export const CarApp = () => {
         vehicleStatus = { ...vehicleStatus, speed, location, driveStatus: 'DRIVE' as const, vin};
         setVehicleState(vehicleStatus);
         // Notify server of vehicle status.
-        ws.send(JSON.stringify({
+        messageQueue.send({
           type: 'statusUpdate', 
           vehicleState: vehicleStatus,
-        }));
+        });
 
       }, 5000);
     });

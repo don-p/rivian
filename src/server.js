@@ -53,7 +53,9 @@ wsServer.on('connection', (socket, request) => {
               paceCarUpdate(vehicle);
             }
             console.log("Vehicle connected with VIN:", VIN, vehicle);
-          } 
+          } else {
+            console.log("Admin connected");
+          }
           // Send updates to admin app when new vehicle connects.
           broadcast(wsServer, {type: 'carStatus', vehicles: vehicleDB});
           break;
@@ -83,22 +85,26 @@ wsServer.on('connection', (socket, request) => {
     const clientId = socket.client;
     if(clientId !== ADMIN_ID) {
       const disconnectedVehicle = vehicleDB[clientId];
-      const isPaceCar = disconnectedVehicle.isPaceCar;
+      if(!!disconnectedVehicle) {
+        const isPaceCar = disconnectedVehicle.isPaceCar;
 
-      // Remove the disconnected vehicle from the conected vehicles collections.
-      // delete vehicleDB[vin];
-      // delete clients[vin];
-      console.log("Vehicle disconnected with VIN:", socket.client, disconnectedVehicle);
+        if(isPaceCar) {
+          // Remove the disconnected vehicle from the conected vehicles collections.
+          // delete vehicleDB[vin];
+          // delete clients[vin];
+          console.log("Vehicle disconnected with VIN:", socket.client, disconnectedVehicle);
 
-      // If disconnected vehicle was "pace car", and there are more cars connected,
-      // select a new one from the connected vehicles collection.
-      if (isPaceCar && Object.keys(vehicleDB).length > 0) {
-        const availableVehicles = Object.values(vehicleDB).filter((item) => {
-          return !item.isAdmin && !item.isPaceCar;
-        })
-        const newPaceCar = availableVehicles[0];
-        paceCarUpdate(newPaceCar);
-        disconnectedVehicle.isPaceCar = false;
+          // If disconnected vehicle was "pace car", and there are more cars connected,
+          // select a new one from the connected vehicles collection.
+          const availableVehicles = Object.values(vehicleDB).filter((item) => {
+            return !item.vin === disconnectedVehicle.vin && !item.isAdmin && !item.isPaceCar;
+          });
+          if (availableVehicles.length > 0) {
+            const newPaceCar = availableVehicles[0];
+            paceCarUpdate(newPaceCar);
+            disconnectedVehicle.isPaceCar = false;
+          }
+        }
       }
     }
   });
