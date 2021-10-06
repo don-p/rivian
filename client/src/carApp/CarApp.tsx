@@ -75,7 +75,7 @@ export const CarApp = () => {
   }, []);
 
   // Make the WebSocket connection.
-  const makeConnection = useCallback((vehicle: VehicleState, vin: number) => {
+  const makeConnection = useCallback((vehicle: VehicleState, vin: number): WebSocket => {
     // Set VIN value on vehicle state.
     let vehicleStatus = {...vehicle, vin};
 
@@ -95,7 +95,7 @@ export const CarApp = () => {
       });
       console.log('initial vehicle status sent');
       // After connection is open, set up status update interval.
-      const timeoutId = setInterval(() => {
+      setInterval(() => {
         const speed = getSpeed();
         const location = getLocation();
         vehicleStatus = { ...vehicleStatus, speed, location, driveStatus: 'DRIVE' as const, vin};
@@ -134,11 +134,39 @@ export const CarApp = () => {
     });
 
     ws.addEventListener('close', () => {
-      // When car is disconnected, "pace car" status is transferred to another car.
+      // When car is disconnected, "pace car" status is transferred to another car by server.
       vehicleStatus = {...vehicleStatus, isPaceCar: false};
       setVehicleState(vehicleStatus);
+
+      /* TEMP reconnect code.
+      // try reconnect.
+      const maxConnects = 5;
+      let connectAttempts = 0;
+      let interval = 1000;
+
+      while( connectAttempts < maxConnects) {
+        const vehicle = vehicleStatus;
+        let connected = false;
+        console.log(`Attemping reconnection in ${interval} seconds`);
+        setTimeout(
+          () => {
+            console.log("Reconnecting...");
+            const newWs = makeConnection(vehicle, vehicle.vin);
+            newWs.addEventListener('open', () => {
+              connected = true;
+            })
+          },
+          interval
+        );
+        connectAttempts++;
+        if(connected) break;
+        interval = interval + 1000;
+      }
+      */
     });
-  }, [getLocation, getSpeed, horn]);
+
+    return ws;
+  }, [getLocation, getSpeed, horn, messageQueue]);
 
   // Disconnect the vehicle from the server.  (For testing.)
   const disconnect = useCallback(() => {
